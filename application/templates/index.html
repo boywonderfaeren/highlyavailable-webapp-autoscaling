@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Highly Available Guestbook</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Highly Available Guestbook</h1>
+    <p>A web app on AWS that survives failures and scales on demand.</p>
+  </header>
+
+  <main>
+    <section class="card server-card">
+      <h2>Which server answered you?</h2>
+      <p>Refresh the page a few times. When the load balancer sends you to a
+         different server, these values change.</p>
+      <div class="facts">
+        <div><span>Instance ID</span><strong>{{ instance_id }}</strong></div>
+        <div><span>Availability Zone</span><strong>{{ az }}</strong></div>
+        <div><span>Database</span>
+          {% if db_ok %}<strong class="ok">Connected</strong>
+          {% else %}<strong class="bad">Unreachable</strong>{% endif %}
+        </div>
+      </div>
+      {% if not db_ok %}
+      <p class="warn">The database could not be reached: {{ error }}</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Leave a message</h2>
+      <form action="{{ url_for('post') }}" method="post">
+        <label for="name">Your name</label>
+        <input id="name" name="name" maxlength="80" required>
+        <label for="message">Message</label>
+        <textarea id="message" name="message" maxlength="500" rows="3" required></textarea>
+        <button type="submit">Post message</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Recent messages</h2>
+      {% if messages %}
+        <ul class="messages">
+        {% for m in messages %}
+          <li>
+            <strong>{{ m.name }}</strong>
+            <p>{{ m.message }}</p>
+            <small>{{ m.created_at }} &middot; saved via {{ m.served_by }}</small>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p>No messages yet. Be the first.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <footer>Project 4 &middot; EC2 + Auto Scaling + ALB + RDS Multi-AZ</footer>
+</body>
+</html>
