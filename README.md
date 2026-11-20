@@ -151,7 +151,7 @@ Created `ha-webapp-asg` using the launch template, in both private subnets, atta
 
 ## 6. Results
 
-Both servers showed as healthy in the target group:
+All servers showed as healthy in the target group (after the scaling test there were 4):
 
 ![Healthy targets](images/12-targets-healthy.png)
 
@@ -164,6 +164,32 @@ I opened the load balancer address and refreshed several times. The instance ID 
 I terminated one web server. The website kept working through the other server, and the Auto Scaling Group started a replacement automatically.
 
 ![Replacement server](images/14-self-healing.png)
+
+### Test 3: Auto scaling
+The website has a `/load` page that makes a server work hard for 20 seconds. I ran four "visitors" from Git Bash that kept calling `/load` for 15 minutes:
+
+```bash
+URL=http://<load-balancer-address>
+for i in 1 2 3 4; do (end=$((SECONDS+900)); while [ $SECONDS -lt $end ]; do curl -s -m 60 -o /dev/null $URL/load; done) & done; wait
+```
+
+To stop busy servers from being wrongly marked as dead during the test, I made the target group's health check more patient for a short time, then set it back to normal afterwards.
+
+What happened:
+
+1. CPU rose from almost 0% to about 95%, above the 50% target.
+
+   ![CPU spike](images/15a-cpu-spike.png)
+
+2. A CloudWatch alarm (`TargetTracking-ha-webapp-asg-AlarmHigh`) went into ALARM and the Auto Scaling Group changed the desired capacity from **2 to 4**, launching two new servers.
+
+   ![Scale out](images/15-scale-out.png)
+
+3. All four servers started and passed their checks, two in each Availability Zone.
+
+   ![Four servers](images/15b-four-servers.png)
+
+4. With the work shared between four servers, the average CPU came back down. When the load stops, the group removes the extra servers by itself and goes back to 2, so I am not paying for servers I don't need.
 
 ---
 
